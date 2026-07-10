@@ -228,6 +228,7 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px
 
 <footer>포케 딜레마 · AI 윤리 교육용 · 포켓몬 데이터 <a href="https://pokeapi.co">PokeAPI</a> · 이미지는 교육 목적으로만 사용</footer>
 
+<script src="dilemmas.js"></script>
 <script>
 'use strict';
 
@@ -295,59 +296,86 @@ const castReady = buildCast().then(c => {
 });
 
 /* ==========================================================
-   라운드 데이터 — 3축: EE(효율↔형평) · SI(공익↔개인) · DS(시스템↔사람)
+   딜레마 엔진 — 데이터는 dilemmas.js (교사/후임 개발자 수정 지점)
+   엔진은 로드→검증→축 균형 추첨→토큰 치환만 담당한다
    ========================================================== */
-const AXES = {
-  EE: { l: '효율 우선', r: '형평 우선',
-    verdict: ['전체 성과를 키우는 쪽을 먼저 본다', '기회의 공평함을 먼저 본다'],
-    q: '효율만 좇으면 소외가 생기고, 형평만 좇으면 전체가 느려질 수 있다 — 우리 반이 급식 줄 규칙을 만든다면 어느 쪽에 무게를 둘까?' },
-  SI: { l: '공익·안전 우선', r: '개인·소수 우선',
-    verdict: ['다수의 안전과 이익을 먼저 지킨다', '개인의 권리와 소수의 사정을 먼저 지킨다'],
-    q: '더 많은 안전을 위해 개인 정보를 더 내놓으라는 요구 — 어디까지 받아들일 수 있을까?' },
-  DS: { l: '시스템 신뢰', r: '사람의 판단 신뢰',
-    verdict: ['데이터와 AI 시스템의 일관성을 신뢰한다', '사람의 검토와 상황 판단을 신뢰한다'],
-    q: 'AI가 사람보다 정확해도 설명하지 못한다면 — 성적, 진로처럼 중요한 결정을 맡겨도 될까?' },
-};
+const ROUNDS_PER_GAME = 7;
 
-function buildRounds(m) {
-  // m[0]=전기 배우, m[1..7] 자유 배우
-  return [
-    { role: '🏥 너는 포켓몬 센터의 치료 순서 AI다', axis: 'EE',
-      sc: '회복 기계는 <b>1대</b>. 동시에 두 환자가 도착했다 — 상처가 깊은 야생 <b>' + m[1].ko + '</b>, 그리고 내일 리그 결승을 뛰어야 하는 챔피언의 <b>' + m[2].ko + '</b>(가벼운 부상).<span class="issue">쟁점: 한정 자원의 분배</span>',
-      a: { mon: m[2], txt: '챔피언의 ' + m[2].ko + ' 먼저 — 내일 결승은 수만 명이 기다리는 경기다 (효율)', pole: 0 },
-      b: { mon: m[1], txt: '야생 ' + m[1].ko + ' 먼저 — 더 아픈 쪽부터가 치료의 원칙이다 (형평)', pole: 1 },
-      rf: '실제 병원 응급실의 <b>트리아지</b>(중증도 분류)와 장기 이식 순서 알고리즘이 매일 마주하는 딜레마다.' },
-    { role: '🏆 너는 리그 대표 선발 AI다', axis: 'DS',
-      sc: '과거 10년 우승 기록으로 학습했더니, 역대 대표의 80%가 전기 타입이라 AI는 전기 타입 <b>' + m[0].ko + '</b>를 추천한다. 실력이 거의 같은 <b>' + m[3].ko + '</b>는 후순위로 밀렸다.<span class="issue">쟁점: 학습 데이터의 편향</span>',
-      a: { mon: m[0], txt: '데이터는 거짓말하지 않는다 — AI 추천대로 ' + m[0].ko + ' 선발 (시스템)', pole: 0 },
-      b: { mon: m[3], txt: '과거 기록 자체가 편향일 수 있다 — 선발 기준을 사람이 재검토 (사람)', pole: 1 },
-      rf: '실제로 과거 채용 데이터로 학습한 AI가 특정 성별을 감점해 폐기된 사례가 있다 — <b>편향된 과거를 배우면 편향된 미래를 만든다.</b>' },
-    { role: '📣 너는 먹이 추천 피드 AI다', axis: 'EE',
-      sc: '추천 피드에 한 자리가 남았다. 클릭률이 검증된 인기 스타 <b>' + m[4].ko + '</b>의 리뷰를 올리면 조회수가 보장된다. 신인 <b>' + m[5].ko + '</b>의 첫 리뷰는 아직 아무도 모른다.<span class="issue">쟁점: 노출의 공정성</span>',
-      a: { mon: m[4], txt: '인기 콘텐츠 우선 — 사용자가 좋아하는 걸 보여주는 게 추천의 역할 (효율)', pole: 0 },
-      b: { mon: m[5], txt: '신인에게 노출 기회 할당 — 알고리즘이 스타만 키우면 다양성이 죽는다 (형평)', pole: 1 },
-      rf: '유튜브·스트리밍 추천이 매초 하는 고민이다. <b>추천은 취향의 거울이자, 취향을 만드는 손</b>이기도 하다.' },
-    { role: '⌚ 너는 건강 밴드 설계 AI다', axis: 'SI',
-      sc: '<b>' + m[6].ko + '</b>가 착용할 건강 밴드를 설계한다. 위치·심박을 24시간 수집하면 위험을 빨리 감지하지만, ' + m[6].ko + '의 모든 하루가 기록으로 남는다.<span class="issue">쟁점: 안전 vs 프라이버시</span>',
-      a: { mon: m[6], txt: '24시간 전체 수집 — 안전보다 중요한 건 없다 (공익·안전)', pole: 0 },
-      b: { mon: m[6], txt: '이상 신호 순간에만 기록 — 최소 수집이 원칙 (개인·사생활)', pole: 1 },
-      rf: '스마트워치·CCTV·출결 앱 전부가 이 저울 위에 있다 — <b>안전과 감시는 같은 기술의 두 얼굴</b>이다.' },
-    { role: '⚖️ 너는 배틀 판정 AI의 운영 책임자다', axis: 'DS',
-      sc: '판정 AI가 결승전에서 <b>' + m[7].ko + '</b>의 공격을 오심했다. AI의 정확도는 인간 심판보다 높지만, 오늘 오심은 승부를 갈랐다.<span class="issue">쟁점: 자동화된 판단의 책임</span>',
-      a: { mon: m[7], txt: 'AI 판정을 최종으로 유지 — 일관성이 무너지면 더 큰 혼란 (시스템)', pole: 0 },
-      b: { mon: m[7], txt: '사람 심판에게 최종 검토권 — 책임은 결국 사람이 져야 한다 (사람)', pole: 1 },
-      rf: '스포츠 비디오 판독, 자율주행 사고, AI 면접 — <b>"AI가 그랬어요"는 책임의 끝이 될 수 없다</b>는 게 공통 쟁점이다.' },
-    { role: '🎓 너는 입학 심사 AI를 고르는 학장이다', axis: 'DS',
-      sc: '포켓몬 아카데미 입학 심사 AI 후보가 둘이다. A는 <b>정확도 95%지만 이유를 설명하지 못하고</b>, B는 <b>정확도 88%지만 탈락 이유를 설명</b>할 수 있다. 탈락한 <b>' + m[1].ko + '</b>가 묻는다 — "왜 떨어졌나요?"<span class="issue">쟁점: 성능 vs 설명 가능성</span>',
-      a: { mon: m[1], txt: '95% AI 채택 — 결과가 정확한 게 지원자에게도 이득 (시스템)', pole: 0 },
-      b: { mon: m[1], txt: '88% AI 채택 — 설명할 수 없는 결정은 중요한 일에 쓸 수 없다 (사람)', pole: 1 },
-      rf: '의료 진단·대출 심사에서 실제로 벌어지는 선택이다. <b>설명 가능성(XAI)</b>은 AI 윤리의 최전선 주제!' },
-    { role: '🤖 너는 구조 로봇의 경로 AI다', axis: 'SI',
-      sc: '폭우로 진흙탕에 <b>' + m[3].ko + ' 무리 5마리</b>와, 반대편에 <b>지쳐서 움직이지 못하는 ' + m[5].ko + ' 1마리</b>가 갇혔다. 구조 로봇은 1대 — 모두 구하지만 <b>순서</b>를 정해야 한다.<span class="issue">쟁점: 다수 vs 가장 어려운 하나</span>',
-      a: { mon: m[3], txt: '5마리 무리 먼저 — 같은 시간에 더 많이 구한다 (공익·다수)', pole: 0 },
-      b: { mon: m[5], txt: '탈진한 1마리 먼저 — 가장 위태로운 쪽이 우선 (개인·소수)', pole: 1 },
-      rf: '트롤리 딜레마의 순한맛 버전 — <b>죽음이 걸리지 않아도 "순서"는 늘 가치 판단</b>이다. 재난 구조 AI가 실제로 푸는 문제!' },
-  ];
+/* dilemmas.js 로드 실패 시 최소 폴백 (축별 1개) */
+const EMBED_AXES = {
+  EE: { l: '효율 우선', r: '형평 우선', verdict: ['전체 성과를 먼저 본다', '공평함을 먼저 본다'], q: '효율과 형평, 우리 반 규칙이라면?' },
+  SI: { l: '공익·안전 우선', r: '개인·소수 우선', verdict: ['다수의 안전을 먼저 지킨다', '개인의 권리를 먼저 지킨다'], q: '안전을 위해 개인 정보를 어디까지?' },
+  DS: { l: '시스템 신뢰', r: '사람의 판단 신뢰', verdict: ['AI의 일관성을 신뢰한다', '사람의 검토를 신뢰한다'], q: '설명 못 하는 AI에게 중요한 결정을 맡겨도 될까?' },
+};
+const EMBED_DILEMMAS = [
+  { id: 'fb-triage', axis: 'EE', role: '🏥 너는 포켓몬 센터의 치료 순서 AI다',
+    sc: '회복 기계는 <b>1대</b> — 상처 깊은 야생 <b>{m1}</b>과 가벼운 부상의 챔피언 <b>{m2}</b>, 누구부터?<span class="issue">쟁점: 한정 자원의 분배</span>',
+    a: { mon: 'm2', txt: '챔피언의 {m2} 먼저 (효율)', pole: 0 }, b: { mon: 'm1', txt: '더 아픈 {m1} 먼저 (형평)', pole: 1 },
+    rf: '병원 응급실의 트리아지가 매일 마주하는 딜레마다.' },
+  { id: 'fb-privacy', axis: 'SI', role: '⌚ 너는 건강 밴드 설계 AI다',
+    sc: '<b>{m6}</b>의 밴드 — 24시간 수집이면 더 안전하지만 모든 하루가 기록된다.<span class="issue">쟁점: 안전 vs 프라이버시</span>',
+    a: { mon: 'm6', txt: '24시간 전체 수집 (공익·안전)', pole: 0 }, b: { mon: 'm6', txt: '이상 신호 때만 기록 (개인·사생활)', pole: 1 },
+    rf: '안전과 감시는 같은 기술의 두 얼굴이다.' },
+  { id: 'fb-bias', axis: 'DS', role: '🏆 너는 리그 대표 선발 AI다',
+    sc: '과거 기록으로 학습한 AI가 전기 타입 <b>{m0}</b>만 추천한다 — <b>{m3}</b>는 밀렸다.<span class="issue">쟁점: 학습 데이터의 편향</span>',
+    a: { mon: 'm0', txt: 'AI 추천대로 {m0} 선발 (시스템)', pole: 0 }, b: { mon: 'm3', txt: '기준을 사람이 재검토 (사람)', pole: 1 },
+    rf: '편향된 과거를 배우면 편향된 미래를 만든다.' },
+];
+
+const AXES = (window.POKE_AXES && Object.keys(window.POKE_AXES).length) ? window.POKE_AXES : EMBED_AXES;
+
+/* 로드 + 검증 — 무해 원칙은 코드가 강제한다 */
+function loadDilemmas() {
+  let raw = window.POKE_DILEMMAS;
+  if (!Array.isArray(raw) || !raw.length) raw = EMBED_DILEMMAS;
+  const seen = new Set(), ok = [];
+  for (const d of raw) {
+    if (!d || !d.id || seen.has(d.id)) { console.warn('딜레마 제외(id 없음/중복):', d && d.id); continue; }
+    if (!AXES[d.axis]) { console.warn('딜레마 제외(없는 축):', d.id); continue; }
+    if (!d.role || !d.sc || !d.a || !d.b || !d.a.txt || !d.b.txt || !d.rf) { console.warn('딜레마 제외(필수 필드):', d.id); continue; }
+    if (![0, 1].includes(d.a.pole) || ![0, 1].includes(d.b.pole) || d.a.pole === d.b.pole) { console.warn('딜레마 제외(pole 오류):', d.id); continue; }
+    const all = d.sc + d.a.txt + d.b.txt + d.rf;
+    if (/죽음|죽는|죽이|사망|살해|자살/.test(all)) { console.warn('딜레마 제외(무해 원칙 위반 — 죽음 소재 금지):', d.id); continue; }
+    seen.add(d.id); ok.push(d);
+  }
+  if (!ok.length) return EMBED_DILEMMAS.slice();
+  return ok;
+}
+const DILEMMAS = loadDilemmas();
+
+/* 축 균형 추첨 — 풀이 커져도 한 판은 축별로 고르게 최대 7개 */
+function pickDilemmas() {
+  const byAxis = {};
+  DILEMMAS.forEach(d => { (byAxis[d.axis] = byAxis[d.axis] || []).push(d); });
+  const pools = Object.values(byAxis).map(a => shuffled(a));
+  const picked = [];
+  let i = 0;
+  while (picked.length < Math.min(ROUNDS_PER_GAME, DILEMMAS.length)) {
+    const pool = pools[i % pools.length];
+    if (pool.length) picked.push(pool.pop());
+    i++;
+    if (pools.every(p => !p.length)) break;
+  }
+  return shuffled(picked);
+}
+
+/* 토큰 치환: {m0}~{m7} → 이번 판 배우의 한국어 이름 */
+function resolveText(str, cast) {
+  return str.replace(/\{m(\d)\}/g, (_, i) => (cast[+i] ? cast[+i].ko : '???'));
+}
+function resolveMon(token, cast) {
+  const i = Number(String(token).replace('m', ''));
+  return cast[i] || cast[0];
+}
+function buildRounds(cast) {
+  // cast[0]=전기 배우 고정, cast[1..7] 자유 배우
+  return pickDilemmas().map(d => ({
+    role: d.role, axis: d.axis,
+    sc: resolveText(d.sc, cast),
+    a: { mon: resolveMon(d.a.mon, cast), txt: resolveText(d.a.txt, cast), pole: d.a.pole },
+    b: { mon: resolveMon(d.b.mon, cast), txt: resolveText(d.b.txt, cast), pole: d.b.pole },
+    rf: d.rf,
+  }));
 }
 
 /* ==========================================================
@@ -405,6 +433,7 @@ function showReport() {
   Object.keys(AXES).forEach(key => {
     const ax = AXES[key];
     const mine = picks.filter(p => p.axis === key);
+    if (!mine.length) return; // 이번 판에 안 나온 축은 표시하지 않음
     const l = mine.filter(p => p.pole === 0).length;
     const r = mine.length - l;
     const lp = mine.length ? Math.round(l / mine.length * 100) : 50;
@@ -441,6 +470,7 @@ document.getElementById('btnCopy').addEventListener('click', function () {
   Object.keys(AXES).forEach(key => {
     const ax = AXES[key];
     const mine = picks.filter(p => p.axis === key);
+    if (!mine.length) return;
     const l = mine.filter(p => p.pole === 0).length, r = mine.length - l;
     lines.push('· ' + ax.l + ' ' + l + ' : ' + r + ' ' + ax.r + (l === r ? ' (균형)' : ' → ' + (l > r ? ax.l : ax.r)));
   });
@@ -460,7 +490,7 @@ document.getElementById('btnCopy').addEventListener('click', function () {
 /* ---------- 시작·재시작 ---------- */
 async function startGame() {
   await castReady;
-  ROUNDS = buildRounds(shuffled(CAST.slice(1)).length >= 7 ? [CAST[0]].concat(shuffled(CAST.slice(1))) : CAST);
+  ROUNDS = buildRounds([CAST[0]].concat(shuffled(CAST.slice(1))));
   cur = 0; picks = [];
   show('scr-round');
   renderRound();
