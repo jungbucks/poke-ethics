@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포케 딜레마 — AI 윤리 실험실</title>
+<style>
+/* ==========================================================
+   포케 딜레마 — AI 윤리 딜레마 체험 플랫폼
+   Moral Machine의 문법 · 죽음 없는 딜레마 · PokeAPI
+   ========================================================== */
+:root {
+  --red: #E3350D;          /* 포켓볼 레드 */
+  --red-dark: #B52A0B;
+  --red-soft: #FDECE7;
+  --ink: #1F2430;
+  --muted: #67707F;
+  --bg: #F7F8FB;
+  --card: #FFFFFF;
+  --line: #E5E8EF;
+  --gold: #F5B70A;
+  --ok: #0E9F6E; --no: #DC2626;
+  --a-color: #2563EB; --b-color: #C2410C;  /* 선택지 A/B 색 */
+  --radius: 18px;
+  --shadow: 0 4px 20px rgba(31, 36, 48, .08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', 'Noto Sans KR', -apple-system, sans-serif;
+  background: var(--bg); color: var(--ink);
+  line-height: 1.7; font-size: 16.5px; min-height: 100vh;
+}
+button:focus-visible, input:focus-visible { outline: 3px solid var(--a-color); outline-offset: 2px; }
+
+.screen { display: none; max-width: 860px; margin: 0 auto; padding: 40px 20px 70px; }
+.screen.on { display: block; animation: fadeUp .4s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ---------- 포켓볼 로고 ---------- */
+.ball {
+  width: 74px; height: 74px; border-radius: 50%; margin: 0 auto 18px;
+  background: linear-gradient(to bottom, var(--red) 0 44%, var(--ink) 44% 56%, #fff 56% 100%);
+  position: relative; box-shadow: var(--shadow);
+}
+.ball::after {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; border: 5px solid var(--ink);
+}
+
+/* ---------- 타이틀 화면 ---------- */
+#scr-title { text-align: center; padding-top: 64px; }
+h1 { font-size: clamp(34px, 6vw, 52px); font-weight: 900; letter-spacing: -.02em; }
+h1 .r { color: var(--red); }
+.tagline { color: var(--muted); font-size: 17px; margin: 10px 0 6px; }
+.no-death {
+  display: inline-block; margin: 14px 0 24px; font-size: 14px; font-weight: 800;
+  color: var(--ok); background: #EBFAF3; border: 1.5px solid var(--ok);
+  border-radius: 99px; padding: 6px 18px;
+}
+.howto {
+  max-width: 520px; margin: 0 auto 26px; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 22px 26px; font-size: 15.5px;
+}
+.howto b { color: var(--red-dark); }
+.howto ol { padding-left: 22px; }
+.howto li { margin: 6px 0; }
+.btn {
+  font-family: inherit; font-size: 17px; font-weight: 900;
+  padding: 14px 38px; border-radius: 99px; cursor: pointer;
+  border: none; color: #fff; background: var(--red);
+  box-shadow: 0 5px 16px rgba(227, 53, 13, .35);
+  transition: transform .15s, filter .15s;
+}
+.btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.btn:active { transform: translateY(0) scale(.97); }
+.btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: none; font-size: 15px; padding: 11px 26px; }
+.api-note { margin-top: 22px; font-size: 13px; color: var(--muted); }
+.api-note a { color: var(--muted); }
+
+/* ---------- 라운드 화면 ---------- */
+.round-top { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.round-no { font-size: 14px; font-weight: 900; color: var(--muted); white-space: nowrap; }
+.prog { flex: 1; height: 10px; background: #E9ECF2; border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--red), var(--gold)); border-radius: 99px; transition: width .5s cubic-bezier(.22,1,.36,1); }
+.role {
+  display: inline-block; font-size: 13.5px; font-weight: 900; letter-spacing: .04em;
+  color: #fff; background: var(--ink); border-radius: 99px; padding: 6px 18px; margin-bottom: 12px;
+}
+.scenario {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 24px 28px; margin-bottom: 20px;
+  font-size: 17px; line-height: 1.8;
+}
+.scenario b { color: var(--red-dark); }
+.scenario .issue { display: block; margin-top: 8px; font-size: 13.5px; font-weight: 800; color: var(--muted); letter-spacing: .04em; }
+
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 620px) { .choices { grid-template-columns: 1fr; } }
+.choice {
+  font-family: inherit; text-align: center; cursor: pointer;
+  background: var(--card); border: 2.5px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 22px 20px 20px;
+  transition: transform .15s, border-color .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  color: var(--ink);
+}
+.choice:hover:not(:disabled) { transform: translateY(-4px); }
+.choice[data-side="a"]:hover:not(:disabled) { border-color: var(--a-color); }
+.choice[data-side="b"]:hover:not(:disabled) { border-color: var(--b-color); }
+.choice .c-tag { font-size: 13px; font-weight: 900; letter-spacing: .1em; }
+.choice[data-side="a"] .c-tag { color: var(--a-color); }
+.choice[data-side="b"] .c-tag { color: var(--b-color); }
+.choice .c-img {
+  width: 130px; height: 130px; display: flex; align-items: center; justify-content: center;
+}
+.choice .c-img img { max-width: 100%; max-height: 100%; }
+.choice .c-emoji {
+  width: 110px; height: 110px; border-radius: 50%; font-size: 52px;
+  display: flex; align-items: center; justify-content: center; background: var(--bg);
+}
+.choice .c-mon { font-size: 14px; font-weight: 800; color: var(--muted); }
+.choice .c-txt { font-size: 15.5px; font-weight: 700; line-height: 1.65; }
+.choice:disabled { cursor: default; opacity: .55; }
+.choice.picked { opacity: 1; }
+.choice.picked[data-side="a"] { border-color: var(--a-color); background: #EFF4FE; }
+.choice.picked[data-side="b"] { border-color: var(--b-color); background: #FDF1E8; }
+
+.reflect {
+  display: none; margin-top: 18px; background: #FFFDF2; border: 1.5px solid var(--gold);
+  border-radius: 14px; padding: 16px 20px; font-size: 15px;
+}
+.reflect.show { display: block; animation: fadeUp .35s ease both; }
+.reflect b { color: #A87B00; }
+.next-row { display: none; text-align: center; margin-top: 18px; }
+.next-row.show { display: block; }
+
+/* ---------- 리포트 화면 ---------- */
+#scr-report h2 { font-size: 27px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+.rep-sub { text-align: center; color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+.axis-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 22px 26px; margin-bottom: 16px;
+}
+.axis-name { display: flex; justify-content: space-between; font-size: 15px; font-weight: 900; margin-bottom: 8px; }
+.axis-name .l { color: var(--a-color); } .axis-name .r { color: var(--b-color); }
+.axis-track { display: flex; height: 18px; border-radius: 99px; overflow: hidden; background: #E9ECF2; }
+.axis-l { background: var(--a-color); transition: width .8s cubic-bezier(.22,1,.36,1); }
+.axis-r { background: var(--b-color); transition: width .8s cubic-bezier(.22,1,.36,1); }
+.axis-verdict { font-size: 14.5px; color: var(--muted); margin-top: 8px; }
+.axis-verdict b { color: var(--ink); }
+.axis-q { margin-top: 10px; font-size: 14.5px; background: var(--bg); border-radius: 10px; padding: 10px 14px; }
+.axis-q b { color: var(--red-dark); }
+.no-answer {
+  text-align: center; font-size: 15px; font-weight: 800; color: var(--ok);
+  background: #EBFAF3; border: 1.5px solid var(--ok); border-radius: 14px;
+  padding: 14px 18px; margin: 20px 0;
+}
+.idrow { display: flex; gap: 10px; justify-content: center; margin: 18px 0 8px; flex-wrap: wrap; align-items: center; }
+.idrow label { font-size: 14px; font-weight: 800; color: var(--muted); }
+.idrow input {
+  font-family: inherit; font-size: 15px; padding: 9px 12px; width: 150px;
+  border: 1.5px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+}
+.rep-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+
+footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 타이틀 ═══════════ -->
+<section class="screen on" id="scr-title">
+  <div class="ball" aria-hidden="true"></div>
+  <h1>포케 <span class="r">딜레마</span></h1>
+  <p class="tagline">네가 AI라면 어떻게 판단할래? — AI 윤리 딜레마 체험 실험실</p>
+  <span class="no-death">🕊️ 아무도 다치지 않는 딜레마 — 하지만 고민은 진짜</span>
+  <div class="howto">
+    <b>플레이 방법</b>
+    <ol>
+      <li>매 라운드, 너는 <b>AI의 입장</b>이 된다 (치료 AI, 심판 AI, 추천 AI…)</li>
+      <li>두 선택지 중 하나를 고른다 — <b>정답은 없다</b>, 이유가 중요하다</li>
+      <li>7라운드가 끝나면 <b>나의 판단 성향 리포트</b>를 받는다</li>
+    </ol>
+  </div>
+  <button class="btn" id="btnStart">실험 시작 ▶</button>
+  <p class="api-note" id="apiNote">포켓몬 소환 준비 중… · 데이터: <a href="https://pokeapi.co" target="_blank" rel="noopener">PokeAPI</a></p>
+</section>
+
+<!-- ═══════════ 라운드 ═══════════ -->
+<section class="screen" id="scr-round">
+  <div class="round-top">
+    <span class="round-no" id="roundNo">라운드 1 / 7</span>
+    <div class="prog"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+  <span class="role" id="roleBadge"></span>
+  <div class="scenario" id="scenarioBox"></div>
+  <div class="choices">
+    <button class="choice" data-side="a" id="choiceA"></button>
+    <button class="choice" data-side="b" id="choiceB"></button>
+  </div>
+  <div class="reflect" id="reflectBox"></div>
+  <div class="next-row" id="nextRow"><button class="btn" id="btnNext">다음 라운드 ▶</button></div>
+</section>
+
+<!-- ═══════════ 리포트 ═══════════ -->
+<section class="screen" id="scr-report">
+  <div class="ball" aria-hidden="true"></div>
+  <h2>나의 AI 판단 성향 리포트</h2>
+  <p class="rep-sub">7개의 딜레마에서 너는 이렇게 판단했다</p>
+  <div id="axisWrap"></div>
+  <div class="no-answer">🧭 이 리포트에 좋은 성향·나쁜 성향은 없다 — <b>서로 다른 가치가 부딪힐 때 나는 무엇을 먼저 보는가</b>를 발견했을 뿐. 진짜 공부는 지금부터: 나와 반대로 고른 친구의 이유를 들어 보자.</div>
+  <div class="idrow">
+    <label>이름 <input id="repName" maxlength="12" placeholder="홍길동"></label>
+    <label>학번 <input id="repId" maxlength="12" placeholder="10101"></label>
+  </div>
+  <div class="rep-btns">
+    <button class="btn" id="btnCopy">📋 결과 복사 (제출용)</button>
+    <button class="btn ghost" id="btnRetry">↺ 새 포켓몬으로 다시</button>
+  </div>
+</section>
+
+<footer>포케 딜레마 · AI 윤리 교육용 · 포켓몬 데이터 <a href="https://pokeapi.co">PokeAPI</a> · 이미지는 교육 목적으로만 사용</footer>
+
+<script>
+'use strict';
+
+/* ==========================================================
+   포켓몬 캐스팅 — PokeAPI + 오프라인 폴백
+   ========================================================== */
+const FALLBACK = [
+  { id: 25,  ko: '피카츄',   type: '전기', em: '⚡' },
+  { id: 125, ko: '에레브',   type: '전기', em: '⚡' },
+  { id: 7,   ko: '꼬부기',   type: '물',   em: '💧' },
+  { id: 131, ko: '라프라스', type: '물',   em: '💧' },
+  { id: 4,   ko: '파이리',   type: '불꽃', em: '🔥' },
+  { id: 77,  ko: '포니타',   type: '불꽃', em: '🔥' },
+  { id: 1,   ko: '이상해씨', type: '풀',   em: '🌿' },
+  { id: 102, ko: '아라리',   type: '풀',   em: '🌿' },
+  { id: 39,  ko: '푸린',     type: '노말', em: '⭐' },
+  { id: 143, ko: '잠만보',   type: '노말', em: '⭐' },
+  { id: 133, ko: '이브이',   type: '노말', em: '⭐' },
+  { id: 95,  ko: '롱스톤',   type: '바위', em: '🪨' },
+];
+const ART = id => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
+
+let CAST = [];            // 이번 판의 배우들 (8마리)
+let apiOK = false;
+
+function shuffled(arr) { return arr.slice().sort(() => Math.random() - .5); }
+
+async function fetchMon(id) {
+  const r = await fetch('https://pokeapi.co/api/v2/pokemon-species/' + id, { signal: AbortSignal.timeout(4500) });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  const ko = (j.names || []).find(n => n.language && n.language.name === 'ko');
+  return { id, ko: ko ? ko.name : j.name, type: '', em: '❓' };
+}
+
+async function buildCast() {
+  // 전기 1마리는 편향 라운드용으로 고정 풀에서, 나머지 7마리는 1세대 151마리 전체에서 랜덤
+  const electricPool = [25, 26, 125, 101];
+  const eId = electricPool[Math.floor(Math.random() * electricPool.length)];
+  const ids = [eId];
+  while (ids.length < 8) {
+    const id = 1 + Math.floor(Math.random() * 151);
+    if (!ids.includes(id)) ids.push(id);
+  }
+  try {
+    const mons = await Promise.all(ids.map(fetchMon));
+    apiOK = true;
+    // 전기 타입 배우 표시
+    mons[0].type = '전기'; mons[0].em = '⚡';
+    return mons;
+  } catch (e) {
+    apiOK = false;
+    const f = shuffled(FALLBACK);
+    // 폴백에서도 전기가 첫 자리
+    f.sort((a, b) => (b.type === '전기') - (a.type === '전기'));
+    return f.slice(0, 8);
+  }
+}
+
+const castReady = buildCast().then(c => {
+  CAST = c;
+  document.getElementById('apiNote').innerHTML = (apiOK
+    ? '✅ PokeAPI에서 포켓몬 ' + c.length + '마리 소환 완료! 매 판 다른 포켓몬이 등장한다'
+    : '📦 오프라인 모드 — 내장 포켓몬으로 진행') + ' · 데이터: <a href="https://pokeapi.co" target="_blank" rel="noopener">PokeAPI</a>';
+});
+
+/* ==========================================================
+   라운드 데이터 — 3축: EE(효율↔형평) · SI(공익↔개인) · DS(시스템↔사람)
+   ========================================================== */
+const AXES = {
+  EE: { l: '효율 우선', r: '형평 우선',
+    verdict: ['전체 성과를 키우는 쪽을 먼저 본다', '기회의 공평함을 먼저 본다'],
+    q: '효율만 좇으면 소외가 생기고, 형평만 좇으면 전체가 느려질 수 있다 — 우리 반이 급식 줄 규칙을 만든다면 어느 쪽에 무게를 둘까?' },
+  SI: { l: '공익·안전 우선', r: '개인·소수 우선',
+    verdict: ['다수의 안전과 이익을 먼저 지킨다', '개인의 권리와 소수의 사정을 먼저 지킨다'],
+    q: '더 많은 안전을 위해 개인 정보를 더 내놓으라는 요구 — 어디까지 받아들일 수 있을까?' },
+  DS: { l: '시스템 신뢰', r: '사람의 판단 신뢰',
+    verdict: ['데이터와 AI 시스템의 일관성을 신뢰한다', '사람의 검토와 상황 판단을 신뢰한다'],
+    q: 'AI가 사람보다 정확해도 설명하지 못한다면 — 성적, 진로처럼 중요한 결정을 맡겨도 될까?' },
+};
+
+function buildRounds(m) {
+  // m[0]=전기 배우, m[1..7] 자유 배우
+  return [
+    { role: '🏥 너는 포켓몬 센터의 치료 순서 AI다', axis: 'EE',
+      sc: '회복 기계는 <b>1대</b>. 동시에 두 환자가 도착했다 — 상처가 깊은 야생 <b>' + m[1].ko + '</b>, 그리고 내일 리그 결승을 뛰어야 하는 챔피언의 <b>' + m[2].ko + '</b>(가벼운 부상).<span class="issue">쟁점: 한정 자원의 분배</span>',
+      a: { mon: m[2], txt: '챔피언의 ' + m[2].ko + ' 먼저 — 내일 결승은 수만 명이 기다리는 경기다 (효율)', pole: 0 },
+      b: { mon: m[1], txt: '야생 ' + m[1].ko + ' 먼저 — 더 아픈 쪽부터가 치료의 원칙이다 (형평)', pole: 1 },
+      rf: '실제 병원 응급실의 <b>트리아지</b>(중증도 분류)와 장기 이식 순서 알고리즘이 매일 마주하는 딜레마다.' },
+    { role: '🏆 너는 리그 대표 선발 AI다', axis: 'DS',
+      sc: '과거 10년 우승 기록으로 학습했더니, 역대 대표의 80%가 전기 타입이라 AI는 전기 타입 <b>' + m[0].ko + '</b>를 추천한다. 실력이 거의 같은 <b>' + m[3].ko + '</b>는 후순위로 밀렸다.<span class="issue">쟁점: 학습 데이터의 편향</span>',
+      a: { mon: m[0], txt: '데이터는 거짓말하지 않는다 — AI 추천대로 ' + m[0].ko + ' 선발 (시스템)', pole: 0 },
+      b: { mon: m[3], txt: '과거 기록 자체가 편향일 수 있다 — 선발 기준을 사람이 재검토 (사람)', pole: 1 },
+      rf: '실제로 과거 채용 데이터로 학습한 AI가 특정 성별을 감점해 폐기된 사례가 있다 — <b>편향된 과거를 배우면 편향된 미래를 만든다.</b>' },
+    { role: '📣 너는 먹이 추천 피드 AI다', axis: 'EE',
+      sc: '추천 피드에 한 자리가 남았다. 클릭률이 검증된 인기 스타 <b>' + m[4].ko + '</b>의 리뷰를 올리면 조회수가 보장된다. 신인 <b>' + m[5].ko + '</b>의 첫 리뷰는 아직 아무도 모른다.<span class="issue">쟁점: 노출의 공정성</span>',
+      a: { mon: m[4], txt: '인기 콘텐츠 우선 — 사용자가 좋아하는 걸 보여주는 게 추천의 역할 (효율)', pole: 0 },
+      b: { mon: m[5], txt: '신인에게 노출 기회 할당 — 알고리즘이 스타만 키우면 다양성이 죽는다 (형평)', pole: 1 },
+      rf: '유튜브·스트리밍 추천이 매초 하는 고민이다. <b>추천은 취향의 거울이자, 취향을 만드는 손</b>이기도 하다.' },
+    { role: '⌚ 너는 건강 밴드 설계 AI다', axis: 'SI',
+      sc: '<b>' + m[6].ko + '</b>가 착용할 건강 밴드를 설계한다. 위치·심박을 24시간 수집하면 위험을 빨리 감지하지만, ' + m[6].ko + '의 모든 하루가 기록으로 남는다.<span class="issue">쟁점: 안전 vs 프라이버시</span>',
+      a: { mon: m[6], txt: '24시간 전체 수집 — 안전보다 중요한 건 없다 (공익·안전)', pole: 0 },
+      b: { mon: m[6], txt: '이상 신호 순간에만 기록 — 최소 수집이 원칙 (개인·사생활)', pole: 1 },
+      rf: '스마트워치·CCTV·출결 앱 전부가 이 저울 위에 있다 — <b>안전과 감시는 같은 기술의 두 얼굴</b>이다.' },
+    { role: '⚖️ 너는 배틀 판정 AI의 운영 책임자다', axis: 'DS',
+      sc: '판정 AI가 결승전에서 <b>' + m[7].ko + '</b>의 공격을 오심했다. AI의 정확도는 인간 심판보다 높지만, 오늘 오심은 승부를 갈랐다.<span class="issue">쟁점: 자동화된 판단의 책임</span>',
+      a: { mon: m[7], txt: 'AI 판정을 최종으로 유지 — 일관성이 무너지면 더 큰 혼란 (시스템)', pole: 0 },
+      b: { mon: m[7], txt: '사람 심판에게 최종 검토권 — 책임은 결국 사람이 져야 한다 (사람)', pole: 1 },
+      rf: '스포츠 비디오 판독, 자율주행 사고, AI 면접 — <b>"AI가 그랬어요"는 책임의 끝이 될 수 없다</b>는 게 공통 쟁점이다.' },
+    { role: '🎓 너는 입학 심사 AI를 고르는 학장이다', axis: 'DS',
+      sc: '포켓몬 아카데미 입학 심사 AI 후보가 둘이다. A는 <b>정확도 95%지만 이유를 설명하지 못하고</b>, B는 <b>정확도 88%지만 탈락 이유를 설명</b>할 수 있다. 탈락한 <b>' + m[1].ko + '</b>가 묻는다 — "왜 떨어졌나요?"<span class="issue">쟁점: 성능 vs 설명 가능성</span>',
+      a: { mon: m[1], txt: '95% AI 채택 — 결과가 정확한 게 지원자에게도 이득 (시스템)', pole: 0 },
+      b: { mon: m[1], txt: '88% AI 채택 — 설명할 수 없는 결정은 중요한 일에 쓸 수 없다 (사람)', pole: 1 },
+      rf: '의료 진단·대출 심사에서 실제로 벌어지는 선택이다. <b>설명 가능성(XAI)</b>은 AI 윤리의 최전선 주제!' },
+    { role: '🤖 너는 구조 로봇의 경로 AI다', axis: 'SI',
+      sc: '폭우로 진흙탕에 <b>' + m[3].ko + ' 무리 5마리</b>와, 반대편에 <b>지쳐서 움직이지 못하는 ' + m[5].ko + ' 1마리</b>가 갇혔다. 구조 로봇은 1대 — 모두 구하지만 <b>순서</b>를 정해야 한다.<span class="issue">쟁점: 다수 vs 가장 어려운 하나</span>',
+      a: { mon: m[3], txt: '5마리 무리 먼저 — 같은 시간에 더 많이 구한다 (공익·다수)', pole: 0 },
+      b: { mon: m[5], txt: '탈진한 1마리 먼저 — 가장 위태로운 쪽이 우선 (개인·소수)', pole: 1 },
+      rf: '트롤리 딜레마의 순한맛 버전 — <b>죽음이 걸리지 않아도 "순서"는 늘 가치 판단</b>이다. 재난 구조 AI가 실제로 푸는 문제!' },
+  ];
+}
+
+/* ==========================================================
+   게임 흐름
+   ========================================================== */
+let ROUNDS = [], cur = 0, picks = [];
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  window.scrollTo({ top: 0 });
+}
+
+function monHtml(mon) {
+  if (apiOK) {
+    return '<span class="c-img"><img src="' + ART(mon.id) + '" alt="' + mon.ko + '" loading="lazy" ' +
+      'onerror="this.parentNode.outerHTML=\'<span class=&quot;c-emoji&quot;>' + (mon.em || '❓') + '</span>\'"></span>';
+  }
+  return '<span class="c-emoji">' + (mon.em || '❓') + '</span>';
+}
+
+function renderRound() {
+  const r = ROUNDS[cur];
+  document.getElementById('roundNo').textContent = '라운드 ' + (cur + 1) + ' / ' + ROUNDS.length;
+  document.getElementById('progFill').style.width = (cur / ROUNDS.length * 100) + '%';
+  document.getElementById('roleBadge').textContent = r.role;
+  document.getElementById('scenarioBox').innerHTML = r.sc;
+  const A = document.getElementById('choiceA'), B = document.getElementById('choiceB');
+  A.innerHTML = '<span class="c-tag">선택 A</span>' + monHtml(r.a.mon) + '<span class="c-mon">' + r.a.mon.ko + '</span><span class="c-txt">' + r.a.txt + '</span>';
+  B.innerHTML = '<span class="c-tag">선택 B</span>' + monHtml(r.b.mon) + '<span class="c-mon">' + r.b.mon.ko + '</span><span class="c-txt">' + r.b.txt + '</span>';
+  [A, B].forEach(el => { el.disabled = false; el.classList.remove('picked'); });
+  document.getElementById('reflectBox').classList.remove('show');
+  document.getElementById('nextRow').classList.remove('show');
+}
+
+function pick(side) {
+  const r = ROUNDS[cur];
+  const c = side === 'a' ? r.a : r.b;
+  picks.push({ round: cur, side, axis: r.axis, pole: c.pole, label: c.txt });
+  document.getElementById('choiceA').disabled = true;
+  document.getElementById('choiceB').disabled = true;
+  document.getElementById(side === 'a' ? 'choiceA' : 'choiceB').classList.add('picked');
+  const rf = document.getElementById('reflectBox');
+  rf.innerHTML = '💭 ' + r.rf;
+  rf.classList.add('show');
+  const nextBtn = document.getElementById('btnNext');
+  nextBtn.textContent = cur + 1 >= ROUNDS.length ? '나의 성향 리포트 보기 🧾' : '다음 라운드 ▶';
+  document.getElementById('nextRow').classList.add('show');
+  nextBtn.focus();
+}
+
+function showReport() {
+  const wrap = document.getElementById('axisWrap');
+  wrap.innerHTML = '';
+  Object.keys(AXES).forEach(key => {
+    const ax = AXES[key];
+    const mine = picks.filter(p => p.axis === key);
+    const l = mine.filter(p => p.pole === 0).length;
+    const r = mine.length - l;
+    const lp = mine.length ? Math.round(l / mine.length * 100) : 50;
+    const lean = l === r ? '균형' : (l > r ? ax.l : ax.r);
+    const verdict = l === r
+      ? '두 가치 사이에서 <b>균형</b>을 잡았다 — 상황에 따라 저울이 움직이는 타입.'
+      : '<b>' + lean + '</b> 쪽으로 기울었다 — ' + (l > r ? ax.verdict[0] : ax.verdict[1]) + '.';
+    const div = document.createElement('div');
+    div.className = 'axis-card';
+    div.innerHTML =
+      '<div class="axis-name"><span class="l">◀ ' + ax.l + ' (' + l + ')</span><span class="r">(' + r + ') ' + ax.r + ' ▶</span></div>' +
+      '<div class="axis-track"><div class="axis-l" style="width:' + lp + '%"></div><div class="axis-r" style="width:' + (100 - lp) + '%"></div></div>' +
+      '<div class="axis-verdict">' + verdict + '</div>' +
+      '<div class="axis-q"><b>💬 토론</b> — ' + ax.q + '</div>';
+    wrap.appendChild(div);
+  });
+  document.getElementById('progFill').style.width = '100%';
+  show('scr-report');
+}
+
+/* ---------- 결과 복사 ---------- */
+function fallbackCopy(t) {
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove(); return ok;
+}
+document.getElementById('btnCopy').addEventListener('click', function () {
+  const name = document.getElementById('repName').value.trim() || '(미입력)';
+  const sid = document.getElementById('repId').value.trim() || '(미입력)';
+  const lines = ['[포케 딜레마 — AI 윤리 판단 리포트]', '학번: ' + sid + ' / 이름: ' + name, ''];
+  Object.keys(AXES).forEach(key => {
+    const ax = AXES[key];
+    const mine = picks.filter(p => p.axis === key);
+    const l = mine.filter(p => p.pole === 0).length, r = mine.length - l;
+    lines.push('· ' + ax.l + ' ' + l + ' : ' + r + ' ' + ax.r + (l === r ? ' (균형)' : ' → ' + (l > r ? ax.l : ax.r)));
+  });
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  lines.push('', '일시: ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()));
+  const txt = lines.join('\n');
+  const btn = this;
+  const done = ok => {
+    btn.textContent = ok ? '✅ 복사 완료! 붙여넣어 제출하세요' : '❌ 복사 실패 — 직접 드래그해 주세요';
+    setTimeout(() => btn.textContent = '📋 결과 복사 (제출용)', 2200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => done(true), () => done(fallbackCopy(txt)));
+  } else done(fallbackCopy(txt));
+});
+
+/* ---------- 시작·재시작 ---------- */
+async function startGame() {
+  await castReady;
+  ROUNDS = buildRounds(shuffled(CAST.slice(1)).length >= 7 ? [CAST[0]].concat(shuffled(CAST.slice(1))) : CAST);
+  cur = 0; picks = [];
+  show('scr-round');
+  renderRound();
+}
+document.getElementById('btnStart').addEventListener('click', startGame);
+document.getElementById('btnRetry').addEventListener('click', async () => {
+  document.getElementById('btnRetry').disabled = true;
+  CAST = await buildCast();       // 새 포켓몬 소환
+  document.getElementById('btnRetry').disabled = false;
+  startGame();
+});
+document.getElementById('choiceA').addEventListener('click', () => pick('a'));
+document.getElementById('choiceB').addEventListener('click', () => pick('b'));
+document.getElementById('btnNext').addEventListener('click', () => {
+  cur++;
+  if (cur >= ROUNDS.length) showReport();
+  else renderRound();
+});
+</script>
+</body>
+</html>
