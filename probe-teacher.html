@@ -1,0 +1,30 @@
+<!DOCTYPE html><meta charset="utf-8">
+<iframe id="f" src="teacher-pilot.html" style="width:900px;height:700px"></iframe>
+<pre id="out">PENDING</pre>
+<script>
+const log=[];const P=m=>{log.push(m);document.getElementById('out').textContent=log.join('\n');};
+document.getElementById('f').onload=async()=>{
+ await new Promise(r=>setTimeout(r,200));
+ const doc=document.getElementById('f').contentDocument;
+ // 합성 데이터: 학생 3 × 4마리 (+헤더 반복, 불량 1, 중복 1)
+ const H='pid\tid\tname\ttier\tcute\tfam\tts';
+ const mk=(p,i,n,t,c)=>[p,i,n,t,c,3,'2026-07-20 10:00'].join('\t');
+ const rows=[H];
+ const data={ 'P-01':[7,2,3,1], 'P-02':[6,3,3,2], 'P-03':[7,2,3,1] };
+ const mons=[[172,'피츄','baby'],[6,'리자몽','final'],[150,'뮤츠','legend'],[74,'꼬마돌','mid']];
+ for(const pid in data){ rows.push(H); mons.forEach((m,k)=>rows.push(mk(pid,m[0],m[1],m[2],data[pid][k]))); }
+ rows.push('깨진줄\t데이터');                       // 불량 1
+ rows.push(mk('P-01',172,'피츄','baby',5));         // 중복(무시돼야)
+ doc.getElementById('rawIn').value=rows.join('\n');
+ doc.getElementById('btnAnalyze').click();
+ await new Promise(r=>setTimeout(r,200));
+ P('요약: '+doc.getElementById('parseMsg').textContent+' (기대: 유효 12 · 제외 1 · 중복 1)');
+ P('참가자 표시: '+doc.getElementById('sumRow').textContent.includes('3'));
+ const tbl=doc.getElementById('monTable').rows;
+ P('포켓몬 행: '+(tbl.length-1)+' (기대 4)');
+ P('1위: '+tbl[1].cells[0].textContent.trim().slice(0,3)+' 평균 '+tbl[1].cells[3].textContent.trim()+' (기대 피츄 6.67)');
+ P('티어 판정 존재: '+(doc.getElementById('tierBox').textContent.includes('baby')));
+ P('config 초안: '+(doc.getElementById('cfgOut').textContent.includes('cutePool')));
+ P('DONE');
+};
+</script>

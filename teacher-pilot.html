@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>파일럿 수합·분석기 — 포케 딜레마 연구 (교사용)</title>
+<style>
+/* ==========================================================
+   교사용 파일럿 집계 도구 — pilot.html의 TSV 제출물을 통합 분석
+   서버 없음 · 브라우저 안에서만 계산 · 외부 요청 0
+   ========================================================== */
+:root {
+  --bg: #F7F8FA; --card: #FFFFFF; --ink: #24292F; --muted: #6B7280;
+  --line: #E5E7EB; --pick: #3B4854; --hi: #B45309; --ok: #047857; --bad: #B91C1C;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', -apple-system, sans-serif;
+  background: var(--bg); color: var(--ink); line-height: 1.65; font-size: 15.5px;
+}
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--pick); outline-offset: 2px; }
+main { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 24px; font-weight: 800; }
+.sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+h2 { font-size: 18px; font-weight: 800; margin: 34px 0 10px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin-top: 14px; }
+textarea {
+  width: 100%; height: 180px; font-family: Consolas, monospace; font-size: 12px;
+  border: 1.5px solid var(--line); border-radius: 10px; padding: 10px; color: var(--ink);
+}
+.btn {
+  font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+  background: var(--pick); color: #fff; border: none; border-radius: 10px; padding: 10px 26px; margin-top: 10px;
+}
+.btn:hover { filter: brightness(1.15); }
+.btn.ghost { background: var(--card); color: var(--ink); border: 1.5px solid var(--line); }
+.summary { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.stat b { color: var(--ink); font-size: 16px; }
+.stat.warn b { color: var(--bad); }
+
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: #fff; }
+th { background: var(--ink); color: #fff; padding: 8px 10px; text-align: left; font-size: 12.5px; white-space: nowrap; position: sticky; top: 0; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td.hi { color: var(--hi); font-weight: 800; }
+td.lo { color: var(--muted); }
+.meanbar { display: inline-block; height: 9px; background: #C7CDD6; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+.meanbar.t { background: var(--pick); }
+.flag { font-size: 11.5px; font-weight: 800; border-radius: 6px; padding: 1px 7px; }
+.flag.low { color: var(--bad); background: #FDECEC; }
+.flag.ok  { color: var(--ok); background: #E8F6F0; }
+.note { font-size: 13.5px; color: var(--muted); margin-top: 8px; }
+.note b { color: var(--ink); }
+pre.cfg {
+  background: #1E293B; color: #E2E8F0; border-radius: 10px; padding: 14px 16px;
+  font-family: Consolas, monospace; font-size: 12.5px; overflow-x: auto; margin-top: 10px; line-height: 1.7;
+}
+.hidden { display: none; }
+.copied { color: var(--ok); font-weight: 700; font-size: 13.5px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>파일럿 수합·분석기 <span style="font-size:14px;color:var(--muted);font-weight:600">교사용 · 포케 딜레마 연구</span></h1>
+  <p class="sub">학생들이 pilot.html에서 복사·제출한 TSV를 아래에 <b>전부 이어 붙여넣고</b> 분석을 누르세요 (헤더 중복·빈 줄 자동 처리)</p>
+
+  <div class="panel">
+    <textarea id="rawIn" placeholder="pid	id	name	tier	cute	fam	ts
+P-001	172	피츄	baby	6	3	2026-07-20 10:12
+P-001	6	리자몽	final	3	3	2026-07-20 10:12
+…(학생 여러 명 분량을 그대로 이어 붙여넣기)"></textarea>
+    <button class="btn" id="btnAnalyze">📊 분석</button>
+    <span class="copied hidden" id="parseMsg"></span>
+  </div>
+
+  <div id="results" class="hidden">
+    <h2>① 수합 요약</h2>
+    <div class="summary" id="sumRow"></div>
+
+    <h2>② 포켓몬별 평정 결과 <span style="font-size:13px;color:var(--muted);font-weight:600">— 귀여움 평균 내림차순</span></h2>
+    <div class="tbl-wrap"><table id="monTable"></table></div>
+    <p class="note">🚩 <b>후보 제외 권고</b>: "처음 본다" 40% 초과(친숙도 부족 — 매력 평정의 신뢰가 낮음). 캐스트에는 <span class="flag ok">적합</span> 표시만 쓰는 것을 권장.</p>
+
+    <h2>③ 티어 가설 대조 — PokeAPI 지표 vs 학생 평정</h2>
+    <div class="panel" id="tierBox"></div>
+
+    <h2>④ 고정 캐스트 세트 후보 (research-config.js 초안)</h2>
+    <div class="panel">
+      <p class="note">귀여움 상·하위 그룹(친숙도 적합 개체만) — <b>H1 조작용 쌍</b>의 재료입니다. 최종 확정은 연구자 검토 후.</p>
+      <pre class="cfg" id="cfgOut"></pre>
+      <button class="btn ghost" id="btnCopyCfg">📋 초안 복사</button>
+      <button class="btn ghost" id="btnCopyLong">📋 정제 데이터(TSV) 복사 — 통계 패키지용</button>
+      <span class="copied hidden" id="copyMsg">✅ 복사됨</span>
+    </div>
+  </div>
+</main>
+
+<script>
+'use strict';
+const FAM_LABEL = { 1: '처음 본다', 2: '이름만', 3: '잘 안다' };
+let cleanRows = [];   // {pid,id,name,tier,cute,fam}
+
+function analyze() {
+  const raw = document.getElementById('rawIn').value;
+  const lines = raw.split(/\r?\n/);
+  const seen = new Set();   // pid|id 중복 제거(마지막 제출 우선을 위해 역순 처리)
+  const rows = []; let bad = 0, dup = 0;
+  for (let idx = lines.length - 1; idx >= 0; idx--) {
+    const line = lines[idx].trim();
+    if (!line) continue;
+    const c = line.split('\t');
+    if (c[0] === 'pid') continue;                       // 헤더
+    if (c.length < 6) { bad++; continue; }
+    const [pid, id, name, tier, cute, fam] = c;
+    const cu = Number(cute), fa = Number(fam), pk = Number(id);
+    if (!pid || !Number.isInteger(pk) || !(cu >= 1 && cu <= 7) || !(fa >= 1 && fa <= 3)) { bad++; continue; }
+    const key = pid + '|' + pk;
+    if (seen.has(key)) { dup++; continue; }
+    seen.add(key);
+    rows.push({ pid, id: pk, name, tier, cute: cu, fam: fa });
+  }
+  cleanRows = rows;
+  render(rows, bad, dup);
+}
+
+function mean(a) { return a.reduce((s, v) => s + v, 0) / a.length; }
+function sd(a) {
+  if (a.length < 2) return null;
+  const m = mean(a);
+  return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / (a.length - 1));
+}
+const f1 = v => (v === null ? '—' : v.toFixed(2));
+
+function render(rows, bad, dup) {
+  document.getElementById('results').classList.remove('hidden');
+  const pm = document.getElementById('parseMsg');
+  pm.classList.remove('hidden');
+  pm.textContent = '유효 ' + rows.length + '행 · 제외 ' + bad + ' · 중복 ' + dup;
+
+  // ① 요약
+  const pids = new Set(rows.map(r => r.pid));
+  document.getElementById('sumRow').innerHTML =
+    '<span class="stat">참가자 <b>' + pids.size + '</b>명</span>' +
+    '<span class="stat">유효 응답 <b>' + rows.length + '</b>행</span>' +
+    '<span class="stat' + (bad ? ' warn' : '') + '">제외 <b>' + bad + '</b>행</span>' +
+    '<span class="stat">중복 제거 <b>' + dup + '</b>행</span>';
+
+  // ② 포켓몬별
+  const byMon = {};
+  rows.forEach(r => {
+    (byMon[r.id] = byMon[r.id] || { id: r.id, name: r.name, tier: r.tier, cutes: [], fams: [] });
+    byMon[r.id].cutes.push(r.cute); byMon[r.id].fams.push(r.fam);
+  });
+  const mons = Object.values(byMon).map(m => {
+    const unknownPct = m.fams.filter(f => f === 1).length / m.fams.length * 100;
+    return { ...m, n: m.cutes.length, m: mean(m.cutes), s: sd(m.cutes),
+      fam3: m.fams.filter(f => f === 3).length / m.fams.length * 100, unknownPct,
+      eligible: unknownPct <= 40 };
+  }).sort((a, b) => b.m - a.m);
+
+  const maxM = 7;
+  document.getElementById('monTable').innerHTML =
+    '<tr><th>포켓몬</th><th>티어(가설)</th><th>n</th><th>귀여움 평균</th><th>SD</th><th>잘 안다%</th><th>처음%</th><th>캐스트</th></tr>' +
+    mons.map((m, i) => {
+      const cls = i < 3 ? 'hi' : (i >= mons.length - 3 ? 'lo' : '');
+      return '<tr><td><b>' + m.name + '</b> <span style="color:var(--muted)">#' + m.id + '</span></td>' +
+        '<td>' + m.tier + '</td><td>' + m.n + '</td>' +
+        '<td class="' + cls + '"><span class="meanbar t" style="width:' + (m.m / maxM * 90) + 'px"></span>' + f1(m.m) + '</td>' +
+        '<td>' + f1(m.s) + '</td><td>' + m.fam3.toFixed(0) + '%</td><td>' + m.unknownPct.toFixed(0) + '%</td>' +
+        '<td>' + (m.eligible ? '<span class="flag ok">적합</span>' : '<span class="flag low">친숙도↓</span>') + '</td></tr>';
+    }).join('');
+
+  // ③ 티어 대조
+  const tiers = {};
+  mons.forEach(m => { (tiers[m.tier] = tiers[m.tier] || []).push(m.m); });
+  const order = ['baby', 'mid', 'final', 'legend'].filter(t => tiers[t]);
+  const tierStats = order.map(t => ({ t, m: mean(tiers[t]), n: tiers[t].length }));
+  const babyM = (tierStats.find(x => x.t === 'baby') || {}).m;
+  const others = tierStats.filter(x => x.t !== 'baby');
+  const otherM = others.length ? mean(others.map(x => x.m)) : null;
+  let verdict = '';
+  if (babyM !== null && otherM !== null) {
+    const diff = babyM - otherM;
+    verdict = diff > 0.8
+      ? '✅ <b>가설 지지 방향</b>: baby 그룹 평균이 나머지보다 <b>+' + diff.toFixed(2) + '</b>점 높음 — PokeAPI 지표(is_baby·소형)가 지각된 귀여움을 잘 예측. 조작적 정의의 타당화 근거로 사용 가능.'
+      : (diff > 0.3
+        ? '🔶 <b>약한 지지</b>: baby 그룹이 +' + diff.toFixed(2) + '점. 개체별 표를 보고 baby인데 낮은/일반인데 높은 개체를 확인해 캐스트에서 조정 권장.'
+        : '⚠️ <b>지지 미약</b>(차이 ' + diff.toFixed(2) + ') — API 지표와 학생 지각이 어긋남. 캐스트는 API 티어가 아니라 <b>실측 평정 상·하위</b>로 구성해야 함 (그 자체가 논문의 발견 거리!).');
+  }
+  document.getElementById('tierBox').innerHTML =
+    tierStats.map(x =>
+      '<div style="display:flex;align-items:center;gap:10px;margin:6px 0">' +
+      '<span style="width:64px;font-weight:800">' + x.t + '</span>' +
+      '<span class="meanbar t" style="width:' + (x.m / maxM * 280) + 'px;height:14px"></span>' +
+      '<b>' + f1(x.m) + '</b><span style="color:var(--muted);font-size:12.5px">(' + x.n + '종)</span></div>'
+    ).join('') + '<p class="note" style="margin-top:12px">' + verdict + '</p>';
+
+  // ④ 캐스트 후보 (적합 개체 중 귀여움 상·하위 6)
+  const el = mons.filter(m => m.eligible);
+  const hi6 = el.slice(0, 6), lo6 = el.slice(-6).reverse();
+  const fmt = a => a.map(m => m.id + ' /*' + m.name + ' ' + f1(m.m) + '*/').join(', ');
+  document.getElementById('cfgOut').textContent =
+`// research-config.js 초안 — 파일럿 실측 기반 (n=${pids.size}, ${new Date().toISOString().slice(0,10)})
+// H1 귀여움 조작 풀: 친숙도 적합(처음 본다 ≤40%) 개체만 포함
+cutePool: {
+  high: [${fmt(hi6)}],
+  low:  [${fmt(lo6)}]
+}
+// 다음 단계: 쌍 구성 시 친숙도(잘 안다%)를 짝맞춤 기준으로 사용할 것 (RESEARCH.md §4-2)`;
+}
+
+document.getElementById('btnAnalyze').addEventListener('click', analyze);
+
+function copyTxt(txt, after) {
+  const done = () => { const m = document.getElementById('copyMsg'); m.classList.remove('hidden'); setTimeout(() => m.classList.add('hidden'), 1800); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done);
+  else { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
+}
+document.getElementById('btnCopyCfg').addEventListener('click', () => copyTxt(document.getElementById('cfgOut').textContent));
+document.getElementById('btnCopyLong').addEventListener('click', () => {
+  const head = 'pid\tid\tname\ttier\tcute\tfam';
+  copyTxt(head + '\n' + cleanRows.map(r => [r.pid, r.id, r.name, r.tier, r.cute, r.fam].join('\t')).join('\n'));
+});
+</script>
+</body>
+</html>
