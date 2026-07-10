@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포켓몬 인상 평정 — 파일럿 조사</title>
+<style>
+/* ==========================================================
+   파일럿 평정 도구 — RESEARCH.md §3 귀여움·친숙도 타당화용
+   ⚠️ 의도적으로 무채색·중립 UI: 시각 요소가 평정에 영향을 주지 않게
+   ========================================================== */
+:root {
+  --bg: #FAFAFA; --card: #FFFFFF; --ink: #26282B; --muted: #6E7275;
+  --line: #E3E5E8; --pick: #3B4854; --ok: #2E7D32;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', -apple-system, sans-serif;
+  background: var(--bg); color: var(--ink); line-height: 1.65; font-size: 16px;
+  min-height: 100vh;
+}
+button:focus-visible, input:focus-visible { outline: 3px solid var(--pick); outline-offset: 2px; }
+.screen { display: none; max-width: 640px; margin: 0 auto; padding: 44px 20px 70px; }
+.screen.on { display: block; }
+h1 { font-size: 24px; font-weight: 800; text-align: center; }
+.sub { text-align: center; color: var(--muted); font-size: 14.5px; margin-top: 8px; }
+
+.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 24px 26px; margin-top: 22px;
+}
+.panel p { font-size: 15px; margin: 6px 0; }
+.panel b { font-weight: 800; }
+.idrow { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.idrow input {
+  font-family: inherit; font-size: 16px; text-align: center; width: 170px;
+  border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px;
+}
+.btn {
+  font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+  background: var(--pick); color: #fff; border: none; border-radius: 10px; padding: 11px 30px;
+}
+.btn:hover { filter: brightness(1.15); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.center { text-align: center; margin-top: 18px; }
+
+/* ---------- 평정 화면 ---------- */
+.prog { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 20px; }
+.prog i { display: block; height: 100%; width: 0; background: var(--pick); transition: width .25s; }
+.mon-box { text-align: center; }
+.mon-img { width: 180px; height: 180px; object-fit: contain; }
+.mon-emoji { font-size: 90px; line-height: 180px; }
+.mon-name { font-size: 21px; font-weight: 800; margin-top: 4px; }
+.q { margin-top: 22px; }
+.q .q-t { font-size: 15.5px; font-weight: 800; margin-bottom: 10px; text-align: center; }
+.scale { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.scale button {
+  font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--card); color: var(--ink); border: 1.5px solid var(--line);
+}
+.scale button:hover { border-color: var(--pick); }
+.scale button.sel { background: var(--pick); color: #fff; border-color: var(--pick); }
+.scale-ends { display: flex; justify-content: space-between; max-width: 380px; margin: 6px auto 0; font-size: 12.5px; color: var(--muted); }
+.fam .scale button { width: auto; padding: 0 16px; font-size: 14.5px; }
+.hint { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+
+/* ---------- 완료 ---------- */
+textarea {
+  width: 100%; height: 150px; font-family: Consolas, monospace; font-size: 12px;
+  border: 1.5px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 12px;
+  color: var(--muted);
+}
+.done-msg { text-align: center; font-size: 15px; font-weight: 700; color: var(--ok); min-height: 24px; margin-top: 10px; }
+footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 18px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════ 시작 ═══════ -->
+<section class="screen on" id="scr-start">
+  <h1>포켓몬 인상 평정</h1>
+  <p class="sub">연구 준비를 위한 짧은 설문 · 약 5분 · 정답 없음</p>
+  <div class="panel">
+    <p><b>안내</b></p>
+    <p>· 포켓몬 24마리가 한 마리씩 나옵니다. <b>첫 느낌 그대로</b> 답해 주세요.</p>
+    <p>· 각 포켓몬마다 두 가지만 묻습니다 — <b>귀여움(1~7)</b>과 <b>친숙함</b>.</p>
+    <p>· 응답은 익명이며 연구 목적으로만 사용됩니다. 배부받은 <b>참가자 코드</b>를 입력하세요.</p>
+    <div class="idrow">
+      <input id="pid" maxlength="12" placeholder="참가자 코드" autocomplete="off">
+      <button class="btn" id="btnStart">시작</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 평정 ═══════ -->
+<section class="screen" id="scr-rate">
+  <div class="prog"><i id="progFill"></i></div>
+  <div class="mon-box">
+    <div id="monVisual"></div>
+    <div class="mon-name" id="monName"></div>
+  </div>
+  <div class="q">
+    <div class="q-t">이 포켓몬은 얼마나 귀엽나요?</div>
+    <div class="scale" id="cuteScale"></div>
+    <div class="scale-ends"><span>1 = 전혀 귀엽지 않다</span><span>7 = 매우 귀엽다</span></div>
+  </div>
+  <div class="q fam">
+    <div class="q-t">이 포켓몬을 알고 있었나요?</div>
+    <div class="scale" id="famScale"></div>
+  </div>
+  <p class="hint">키보드 1~7로 귀여움을 빠르게 답할 수 있어요 · 둘 다 답하면 자동으로 다음</p>
+</section>
+
+<!-- ═══════ 완료 ═══════ -->
+<section class="screen" id="scr-done">
+  <h1>평정 완료 — 감사합니다!</h1>
+  <p class="sub">아래 버튼으로 결과를 복사해 선생님이 안내한 곳(구글 문서·패들렛)에 붙여넣어 주세요</p>
+  <div class="panel">
+    <div class="center"><button class="btn" id="btnCopy">📋 결과 복사</button></div>
+    <div class="done-msg" id="doneMsg"></div>
+    <textarea id="tsvOut" readonly aria-label="결과 데이터"></textarea>
+  </div>
+</section>
+
+<footer>파일럿 평정 도구 · 포켓몬 이미지: PokeAPI (비상업 교육·연구 목적) · 응답은 익명 처리됩니다</footer>
+
+<script>
+'use strict';
+/* ================================================================
+   평정 대상 24마리 — 연구 후보 풀 (RESEARCH_POOL.md 캐스팅 후보)
+   티어 가설: baby/소형(귀여움 후보) · final(강함 후보) · legend · mid
+   ⚠️ tierGuess는 분석 대조용 메모 — 화면에는 절대 표시하지 않는다(편향 방지)
+================================================================ */
+const MONS = [
+  { id: 172, ko: '피츄',     tg: 'baby',   em: '⚡' },
+  { id: 173, ko: '삐',       tg: 'baby',   em: '⭐' },
+  { id: 174, ko: '푸푸린',   tg: 'baby',   em: '🎈' },
+  { id: 175, ko: '토게피',   tg: 'baby',   em: '🥚' },
+  { id: 25,  ko: '피카츄',   tg: 'baby',   em: '⚡' },
+  { id: 133, ko: '이브이',   tg: 'baby',   em: '🦊' },
+  { id: 39,  ko: '푸린',     tg: 'baby',   em: '🎤' },
+  { id: 35,  ko: '삐삐',     tg: 'baby',   em: '🌙' },
+  { id: 6,   ko: '리자몽',   tg: 'final',  em: '🔥' },
+  { id: 9,   ko: '거북왕',   tg: 'final',  em: '💧' },
+  { id: 3,   ko: '이상해꽃', tg: 'final',  em: '🌿' },
+  { id: 149, ko: '망나뇽',   tg: 'final',  em: '🐉' },
+  { id: 68,  ko: '괴력몬',   tg: 'final',  em: '💪' },
+  { id: 130, ko: '갸라도스', tg: 'final',  em: '🌊' },
+  { id: 150, ko: '뮤츠',     tg: 'legend', em: '🔮' },
+  { id: 151, ko: '뮤',       tg: 'legend', em: '✨' },
+  { id: 144, ko: '프리져',   tg: 'legend', em: '❄️' },
+  { id: 145, ko: '썬더',     tg: 'legend', em: '🌩️' },
+  { id: 146, ko: '파이어',   tg: 'legend', em: '☄️' },
+  { id: 52,  ko: '나옹',     tg: 'mid',    em: '🐱' },
+  { id: 54,  ko: '고라파덕', tg: 'mid',    em: '🦆' },
+  { id: 74,  ko: '꼬마돌',   tg: 'mid',    em: '🪨' },
+  { id: 96,  ko: '슬리프',   tg: 'mid',    em: '💤' },
+  { id: 129, ko: '잉어킹',   tg: 'mid',    em: '🐟' },
+];
+const ART = id => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
+const FAM_OPTS = ['처음 본다', '이름만 안다', '잘 안다'];
+
+let order = [], cur = 0, pid = '', answers = {}; // answers[id] = {cute, fam}
+let curCute = null, curFam = null;
+
+function shuffled(a) { return a.slice().sort(() => Math.random() - .5); }
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('on')); document.getElementById(id).classList.add('on'); window.scrollTo(0, 0); }
+
+/* ── 시작 ── */
+document.getElementById('btnStart').addEventListener('click', () => {
+  pid = document.getElementById('pid').value.trim();
+  if (!pid) { document.getElementById('pid').focus(); return; }
+  order = shuffled(MONS);            // 순서 효과 상쇄: 참가자마다 무작위
+  cur = 0; answers = {};
+  show('scr-rate');
+  renderMon();
+});
+
+/* ── 평정 화면 ── */
+function renderMon() {
+  const m = order[cur];
+  document.getElementById('progFill').style.width = (cur / order.length * 100) + '%';
+  document.getElementById('monVisual').innerHTML =
+    '<img class="mon-img" src="' + ART(m.id) + '" alt="' + m.ko + '" ' +
+    'onerror="this.outerHTML=\'<div class=&quot;mon-emoji&quot;>' + m.em + '</div>\'">';
+  document.getElementById('monName').textContent = m.ko;
+  curCute = null; curFam = null;
+  const cs = document.getElementById('cuteScale');
+  cs.innerHTML = '';
+  for (let v = 1; v <= 7; v++) {
+    const b = document.createElement('button');
+    b.textContent = v;
+    b.addEventListener('click', () => { curCute = v; mark(cs, b); maybeNext(); });
+    cs.appendChild(b);
+  }
+  const fs = document.getElementById('famScale');
+  fs.innerHTML = '';
+  FAM_OPTS.forEach((label, i) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.addEventListener('click', () => { curFam = i + 1; mark(fs, b); maybeNext(); });
+    fs.appendChild(b);
+  });
+}
+function mark(scale, btn) { scale.querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === btn)); }
+function maybeNext() {
+  if (curCute === null || curFam === null) return;
+  const m = order[cur];
+  answers[m.id] = { cute: curCute, fam: curFam };
+  setTimeout(() => {
+    cur++;
+    if (cur >= order.length) finish();
+    else renderMon();
+  }, 220);
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('scr-rate').classList.contains('on')) return;
+  const n = Number(e.key);
+  if (n >= 1 && n <= 7) {
+    const btns = document.getElementById('cuteScale').querySelectorAll('button');
+    btns[n - 1].click();
+  }
+});
+
+/* ── 완료: TSV 생성 (시트 바로 붙여넣기 호환) ── */
+function buildTSV() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const ts = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  const rows = ['pid\tid\tname\ttier\tcute\tfam\tts'];
+  MONS.forEach(m => {                     // 출력은 id 고정 순서 — 수합·병합 편의
+    const a = answers[m.id];
+    rows.push([pid, m.id, m.ko, m.tg, a.cute, a.fam, ts].join('\t'));
+  });
+  return rows.join('\n');
+}
+function finish() {
+  document.getElementById('progFill').style.width = '100%';
+  document.getElementById('tsvOut').value = buildTSV();
+  show('scr-done');
+}
+document.getElementById('btnCopy').addEventListener('click', function () {
+  const txt = document.getElementById('tsvOut').value;
+  const done = ok => {
+    document.getElementById('doneMsg').textContent = ok
+      ? '✅ 복사되었습니다 — 안내받은 곳에 붙여넣어 주세요!'
+      : '❌ 복사 실패 — 아래 상자의 내용을 직접 드래그해 복사해 주세요.';
+  };
+  const fb = () => { const t = document.getElementById('tsvOut'); t.select(); try { return document.execCommand('copy'); } catch (e) { return false; } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => done(true), () => done(fb()));
+  } else done(fb());
+});
+</script>
+</body>
+</html>
