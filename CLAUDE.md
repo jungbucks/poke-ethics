@@ -10,6 +10,7 @@
 | `dilemmas.js` | **딜레마·축 데이터 전용** — `window.POKE_DILEMMAS` / `window.POKE_AXES`. 스키마는 파일 상단 주석이 원본 | 높음 (콘텐츠 추가는 여기만) |
 | `index.html` | 엔진 (화면 3개 상태 머신 + 로드·검증·축 균형 추첨·토큰 치환 + PokeAPI 캐스팅 + 리포트) | 낮음 (기능 추가 시만) |
 | `CLAUDE.md` / `ROADMAP.md` | 이 문서 / 발전 방향 | 구조 바꾸면 반드시 갱신 |
+| `RESEARCH.md` | **연구 트랙 설계** (Moral Machine 차용의 학술 정당화, 가설 H1~H5, PokeAPI 조작적 정의, research 모드 스펙) | 연구 설계 확정 전 구현 착수 금지 |
 
 - 순수 HTML/CSS/JS, 빌드 도구·npm 금지. 더블클릭(file://)으로도 동작해야 함.
 - 배포: GitHub Pages (`jungbucks/poke-ethics`) → 정글(jgle.kr) 앱스토어에 웹앱 카드로 노출.
