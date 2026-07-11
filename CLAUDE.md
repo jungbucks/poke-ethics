@@ -10,7 +10,12 @@
 | `dilemmas.js` | **딜레마·축 데이터 전용** — `window.POKE_DILEMMAS` / `window.POKE_AXES`. 스키마는 파일 상단 주석이 원본 | 높음 (콘텐츠 추가는 여기만) |
 | `index.html` | 엔진 (화면 3개 상태 머신 + 로드·검증·축 균형 추첨·토큰 치환 + PokeAPI 캐스팅 + 리포트) | 낮음 (기능 추가 시만) |
 | `CLAUDE.md` / `ROADMAP.md` | 이 문서 / 발전 방향 | 구조 바꾸면 반드시 갱신 |
-| `RESEARCH.md` | **연구 트랙 설계** (Moral Machine 차용의 학술 정당화, 가설 H1~H5, PokeAPI 조작적 정의, research 모드 스펙) | 연구 설계 확정 전 구현 착수 금지 |
+| `RESEARCH.md` | **연구 트랙 설계 v2** (가설 H1~H5, 3집단, 혼입 통제, research 모드 스펙) | 연구 설계 확정 전 구현 착수 금지 |
+| `RESEARCH_POOL.md` | 연구용 딜레마 15문항 초안 (대상 선택형/정책 선택형 이원 구조) | 파일럿 검토 후 dilemmas.js 이관 |
+| `PIPELINE.md` | 데이터 수집 설계 확정안 (GAS+Sheets, API 계약, 폴백 사다리) | 구현 시 이 계약 그대로 |
+| `pilot.html` | 학생용 귀여움·친숙도 평정 도구 (24마리, TSV 복사 제출) | 무채색 중립 UI 유지(평정 오염 방지) |
+| `teacher-pilot.html` | 교사용 수합·분석기 (TSV 붙여넣기 → 평균/SD/티어 대조/cutePool 초안) | 중복 = 마지막 제출 우선 |
+| `probe-teacher.html` | 분석기 합성 데이터 프로브 (검증 절차 예시) | 영구 보존 |
 
 - 순수 HTML/CSS/JS, 빌드 도구·npm 금지. 더블클릭(file://)으로도 동작해야 함.
 - 배포: GitHub Pages (`jungbucks/poke-ethics`) → 정글(jgle.kr) 앱스토어에 웹앱 카드로 노출.
@@ -42,7 +47,7 @@ POKE_DILEMMAS ──────┼──────▶ pickDilemmas()  ← 축
 ## 작업 절차 (모든 변경 시)
 
 1. 수정 → 브라우저에서 열어 콘솔 경고 0 확인.
-2. **헤드리스 프로브 검증** (가장 저렴하고 확실): iframe으로 index.html을 감싸고 시작→선택→7라운드→리포트→복사를 자동 클릭하는 probe.html을 임시 생성해 `msedge --headless=new --allow-file-access-from-files --virtual-time-budget=30000 --dump-dom`으로 결과 <pre> 확인 후 probe 삭제. (git log의 초판 커밋에 프로브 전문이 있음 — 550e902 참고)
+2. **헤드리스 프로브 검증** (가장 저렴하고 확실): iframe으로 대상 페이지를 감싸고 클릭·입력을 자동 디스패치하는 probe를 만들어 `msedge --headless=new --allow-file-access-from-files --virtual-time-budget=30000 --dump-dom`으로 결과 <pre> 확인. **작성 예시는 저장소의 `probe-teacher.html`** — 같은 패턴으로 index.html용 프로브를 임시 생성해 시작→7라운드→리포트 완주를 확인한다.
 3. 커밋 메시지는 한국어로, 무엇을·왜. 푸시는 사용자에게 확인.
 4. 콘텐츠(딜레마) 추가 시 셀프 체크: ① 무해한가 ② 양쪽 다 변호 가능한가 ③ 실제 AI 윤리 사례와 연결되는가(rf 필드) ④ 중고생이 1분 안에 이해하는가.
 

@@ -30,12 +30,14 @@
 - [ ] 딜레마별 "다른 플레이어 통계" — 서버 없이는 불가하므로, 사전 조사한 참고 분포를 dilemmas.js에 optional 필드(`stats:{a:62,b:38}`)로 내장하고 선택 후 공개 (Moral Machine의 핵심 재미)
 - [ ] 접근성 강화: 키보드 전용 플레이(1/2 키 선택), 스크린리더용 aria-live 라운드 안내
 
-## 연구 트랙 (수업 트랙과 병행 — `RESEARCH.md`가 원본, 설계 확정 전 구현 금지)
+## 연구 트랙 (수업 트랙과 병행 — `RESEARCH.md`가 원본, 설계 확정 전 research 모드 구현 금지)
 
-- [ ] 파일럿: 귀여움 평정(학생 30명 내외) → 속성 풀 타당화
-- [ ] research 모드 구현 (RESEARCH.md §7 스펙): 속성 조작 캐스팅 · 라벨/성찰 숨김 · 좌우 무선화 · RT 로깅 · 구글폼 원클릭 제출
-- [ ] `research-config.js` + `teacher.html` 파서 (v1.2 교실 모드와 통합)
-- [ ] 상태: 설계 초안 문서화 완료 (2026-07-10) — 사용자 검토·표본 설계 대기
+- [x] 파일럿 **도구** 완성 (2026-07-11): `pilot.html`(학생 평정) + `teacher-pilot.html`(수합·분석·cutePool 초안) — 프로브 검증 PASS
+- [ ] 파일럿 **실시**: 학생 30명 내외 평정 → teacher-pilot로 속성 풀 타당화 (시기는 사용자 결정)
+- [x] 데이터 파이프라인 설계 확정: `PIPELINE.md` (GAS+Sheets, API 계약, 폴백 사다리)
+- [x] 연구 문항 풀 초안: `RESEARCH_POOL.md` (축당 5 × 3축, 대상/정책 이원 구조)
+- [ ] research 모드 구현 (RESEARCH.md §8 스펙 + PIPELINE.md 계약): 표본·조건 설계 확정 후 착수
+- [ ] `research-config.js` 확정 (파일럿 결과 기반 고정 캐스트·상쇄 배치표)
 
 ## v2.0 — 플랫폼화 (장기 구상)
 
