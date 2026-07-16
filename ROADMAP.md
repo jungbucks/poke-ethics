@@ -26,6 +26,10 @@
 - [ ] 딜레마별 "다른 플레이어 통계" — 서버 없이는 불가하므로, 사전 조사한 참고 분포를 dilemmas.js에 optional 필드(`stats:{a:62,b:38}`)로 내장하고 선택 후 공개 (Moral Machine의 핵심 재미)
 - [ ] 접근성 강화: 키보드 전용 플레이(1/2 키 선택), 스크린리더용 aria-live 라운드 안내
 
+## v1.4 — 이브이 진화 리포트 ✅ 완료 (2026-07-16)
+
+- [x] **`EEVEE.md`가 설계 원본**: 3축 2³=8조합 → 이브이 진화 8종 매핑(`evolutions.js` 데이터 분리), 판정은 index.html `judgeEvolution()` 순수 함수(다수결·동점=축 마지막 선택), `window.POKE_RESEARCH`면 연출 생략. 프로브 8건 PASS(8조합·동점·축누락·E2E 완주·중립 반응·고정 문구).
+
 ## 연구 트랙 (수업 트랙과 병행 — `RESEARCH.md`가 원본, 설계 확정 전 research 모드 구현 금지)
 
 - [x] 파일럿 **도구** 완성 (2026-07-11): `pilot.html`(학생 평정) + `teacher-pilot.html`(수합·분석·cutePool 초안) — 프로브 검증 PASS

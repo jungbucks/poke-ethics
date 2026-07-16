@@ -8,7 +8,8 @@
 | 파일 | 역할 | 수정 빈도 |
 |---|---|---|
 | `dilemmas.js` | **딜레마·축 데이터 전용** — `window.POKE_DILEMMAS` / `window.POKE_AXES`. 스키마는 파일 상단 주석이 원본 | 높음 (콘텐츠 추가는 여기만) |
-| `index.html` | 엔진 (화면 3개 상태 머신 + 로드·검증·축 균형 추첨·토큰 치환 + PokeAPI 캐스팅 + 리포트) | 낮음 (기능 추가 시만) |
+| `evolutions.js` | **이브이 진화 매핑 데이터** (`window.POKE_EVOLUTIONS`, 설계=EEVEE.md) — 칭호 8종은 전부 긍정·대등 유지 | 낮음 |
+| `index.html` | 엔진 (화면 3개 상태 머신 + 로드·검증·축 균형 추첨·토큰 치환 + PokeAPI 캐스팅 + 리포트 + 이브이 진화 판정 `judgeEvolution()` 순수 함수·연출, 2026-07-16) — `window.POKE_RESEARCH`가 참이면 진화 연출 생략(연구 혼입 통제) | 낮음 (기능 추가 시만) |
 | `CLAUDE.md` / `ROADMAP.md` | 이 문서 / 발전 방향 | 구조 바꾸면 반드시 갱신 |
 | `RESEARCH.md` | **연구 트랙 설계 v2** (가설 H1~H5, 3집단, 혼입 통제, research 모드 스펙) | 연구 설계 확정 전 구현 착수 금지 |
 | `RESEARCH_POOL.md` | 연구용 딜레마 15문항 초안 (대상 선택형/정책 선택형 이원 구조) | 파일럿 검토 후 dilemmas.js 이관 |

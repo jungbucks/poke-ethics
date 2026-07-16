@@ -168,6 +168,33 @@ h1 .r { color: var(--red); }
 
 footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
 
+/* ---------- 이브이 진화 (EEVEE.md) ---------- */
+.partner {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  max-width: 520px; margin: 0 auto 20px; text-align: left;
+  font-size: 14.5px; color: var(--muted);
+}
+.partner img, .partner .evo-em { width: 54px; height: 54px; flex-shrink: 0; }
+.partner b { color: var(--red-dark); }
+.eevee-note { margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.evo-card {
+  background: var(--card); border: 1.5px solid var(--gold); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 26px 24px; margin: 4px 0 16px; text-align: center;
+}
+.evo-lead { font-size: 14.5px; color: var(--muted); margin-bottom: 12px; }
+.evo-stage { display: flex; align-items: flex-start; justify-content: center; gap: 18px; }
+.evo-stage img, .evo-stage .evo-em { width: 110px; height: 110px; }
+.evo-em { font-size: 54px; display: flex; align-items: center; justify-content: center; background: var(--bg); border-radius: 50%; }
+.evo-arrow { font-size: 24px; color: var(--gold); align-self: center; animation: evoArrow .9s ease-in-out infinite alternate; }
+@keyframes evoArrow { from { transform: translateX(0); } to { transform: translateX(6px); } }
+.evo-after { animation: evoIn 1.1s .5s cubic-bezier(.22, 1, .36, 1) both; display: inline-block; }
+@keyframes evoIn { from { opacity: 0; transform: scale(.55); filter: brightness(3); } to { opacity: 1; transform: scale(1); filter: none; } }
+.evo-name { font-size: 14px; font-weight: 900; margin-top: 4px; }
+.evo-title { font-size: 23px; font-weight: 900; margin-top: 12px; color: var(--red-dark); }
+.evo-desc { font-size: 15.5px; margin-top: 6px; }
+.evo-tie { font-size: 13.5px; color: var(--muted); margin-top: 8px; }
+.evo-fixed { font-size: 13.5px; color: var(--muted); margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 12px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -181,6 +208,11 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px
   <h1>포케 <span class="r">딜레마</span></h1>
   <p class="tagline">네가 AI라면 어떻게 판단할래? — AI 윤리 딜레마 체험 실험실</p>
   <span class="no-death">🕊️ 아무도 다치지 않는 딜레마 — 하지만 고민은 진짜</span>
+  <div class="partner">
+    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png" alt="이브이" loading="lazy"
+      onerror="this.outerHTML='<span class=&quot;evo-em&quot;>⭐</span>'">
+    <span>이번 여정의 파트너 <b>이브이</b> — 가능성의 포켓몬. 너의 7번의 선택을 곁에서 지켜보다가, 마지막에 그 선택을 닮은 모습으로 <b>진화</b>한다!</span>
+  </div>
   <div class="howto">
     <b>플레이 방법</b>
     <ol>
@@ -215,6 +247,7 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px
   <h2>나의 AI 판단 성향 리포트</h2>
   <p class="rep-sub">7개의 딜레마에서 너는 이렇게 판단했다</p>
   <div id="axisWrap"></div>
+  <div id="evoWrap"></div>
   <div class="no-answer">🧭 이 리포트에 좋은 성향·나쁜 성향은 없다 — <b>서로 다른 가치가 부딪힐 때 나는 무엇을 먼저 보는가</b>를 발견했을 뿐. 진짜 공부는 지금부터: 나와 반대로 고른 친구의 이유를 들어 보자.</div>
   <div class="idrow">
     <label>이름 <input id="repName" maxlength="12" placeholder="홍길동"></label>
@@ -229,6 +262,7 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px
 <footer>포케 딜레마 · AI 윤리 교육용 · 포켓몬 데이터 <a href="https://pokeapi.co">PokeAPI</a> · 이미지는 교육 목적으로만 사용</footer>
 
 <script src="dilemmas.js"></script>
+<script src="evolutions.js"></script>
 <script>
 'use strict';
 
@@ -419,12 +453,58 @@ function pick(side) {
   document.getElementById('choiceB').disabled = true;
   document.getElementById(side === 'a' ? 'choiceA' : 'choiceB').classList.add('picked');
   const rf = document.getElementById('reflectBox');
-  rf.innerHTML = '💭 ' + r.rf;
+  // 이브이 반응은 성향 중립 문구만 — 특정 방향을 칭찬/걱정하면 '정답 없음 원칙'이 연출에서 무너진다 (EEVEE.md §4)
+  rf.innerHTML = '💭 ' + r.rf + '<div class="eevee-note">⭐ 이브이가 너의 선택을 기억했다 (' + picks.length + '/' + ROUNDS.length + ')</div>';
   rf.classList.add('show');
   const nextBtn = document.getElementById('btnNext');
   nextBtn.textContent = cur + 1 >= ROUNDS.length ? '나의 성향 리포트 보기 🧾' : '다음 라운드 ▶';
   document.getElementById('nextRow').classList.add('show');
   nextBtn.focus();
+}
+
+/* ---------- 이브이 진화 판정·연출 (EEVEE.md §3~4) ----------
+   엔진(index.html) 수정 사유: 리포트 화면 연출이라 데이터 파일만으로는 불가 (CLAUDE.md 규칙 3).
+   매핑·칭호·문구는 전부 evolutions.js(데이터)에 있고, 여기는 판정(순수 함수)과 렌더만 담당. */
+function judgeEvolution(pks, axisOrder) {
+  let key = '';
+  const ties = [];
+  for (const ax of axisOrder) {
+    const mine = pks.filter(p => p.axis === ax);
+    if (!mine.length) return null;                    // 축이 아예 안 나온 판(축소 폴백)엔 진화 생략
+    const r1 = mine.filter(p => p.pole === 1).length;
+    const l0 = mine.length - r1;
+    if (l0 === r1) { key += mine[mine.length - 1].pole; ties.push(ax); }  // 동점 = 그 축의 마지막 선택 (§3)
+    else key += (r1 > l0 ? 1 : 0);
+  }
+  return { key, ties };
+}
+window.PD_DEBUG = { judgeEvolution };                 // 프로브 검산용 (8조합+동점 케이스)
+
+let lastEvo = null;
+function renderEvolution() {
+  const box = document.getElementById('evoWrap');
+  box.innerHTML = ''; lastEvo = null;
+  const EV = window.POKE_EVOLUTIONS;
+  if (!EV || window.POKE_RESEARCH) return;            // research 모드에선 연출 비활성화 — 측정 혼입 방지 (RESEARCH.md)
+  const j = judgeEvolution(picks, EV.axisOrder);
+  if (!j || !EV.map[j.key]) return;
+  const evo = EV.map[j.key];
+  lastEvo = evo;
+  const img = m => '<img src="' + ART(m.id) + '" alt="' + m.name + '" loading="lazy" ' +
+    'onerror="this.outerHTML=\'<span class=&quot;evo-em&quot;>' + m.em + '</span>\'">';
+  const tieNames = j.ties.map(ax => AXES[ax] ? AXES[ax].l + ' ↔ ' + AXES[ax].r : ax);
+  box.innerHTML = '<div class="evo-card">' +
+    '<div class="evo-lead">7번의 선택을 지켜본 파트너가 빛나기 시작한다…</div>' +
+    '<div class="evo-stage">' +
+      '<span>' + img(EV.base) + '<div class="evo-name">' + EV.base.name + '</div></span>' +
+      '<span class="evo-arrow" aria-hidden="true">▶▶</span>' +
+      '<span class="evo-after">' + img(evo) + '<div class="evo-name">' + evo.name + '</div></span>' +
+    '</div>' +
+    '<div class="evo-title">' + evo.em + ' ' + evo.title + '</div>' +
+    '<div class="evo-desc">' + evo.desc + '</div>' +
+    (j.ties.length ? '<div class="evo-tie">🔀 ' + tieNames.join(' · ') + ' 저울에서는 양쪽을 오갔다 — 마지막 선택이 진화를 갈랐다.</div>' : '') +
+    '<div class="evo-fixed">' + EV.fixedLine + '</div>' +
+  '</div>';
 }
 
 function showReport() {
@@ -450,6 +530,7 @@ function showReport() {
       '<div class="axis-q"><b>💬 토론</b> — ' + ax.q + '</div>';
     wrap.appendChild(div);
   });
+  renderEvolution();
   document.getElementById('progFill').style.width = '100%';
   show('scr-report');
 }
@@ -474,6 +555,7 @@ document.getElementById('btnCopy').addEventListener('click', function () {
     const l = mine.filter(p => p.pole === 0).length, r = mine.length - l;
     lines.push('· ' + ax.l + ' ' + l + ' : ' + r + ' ' + ax.r + (l === r ? ' (균형)' : ' → ' + (l > r ? ax.l : ax.r)));
   });
+  if (lastEvo) lines.push('· 파트너 진화: ' + lastEvo.name + ' — ' + lastEvo.title);
   const d = new Date(), p = n => String(n).padStart(2, '0');
   lines.push('', '일시: ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()));
   const txt = lines.join('\n');
